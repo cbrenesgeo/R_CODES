@@ -1,0 +1,68 @@
+# Satellite image classification algorithm XGBOOST
+#Use polygons as a training data set
+
+
+# Cargar librerías necesarias
+library(xgboost)
+library(raster)
+library(rgdal)
+library(caret)
+
+# Definir rutas de archivos
+ruta_imagen <- "E:/UAC/2024/CF_TRIFINIO/IMAGE_PREPROCESS/clip_mosaick_nodata_fix2.tif"
+ruta_shp <- "E:/UAC/2024/CF_TRIFINIO/CLASS/firmas/ENSAMBLE/train_301024.shp"
+
+# Cargar archivos
+shp <- shapefile(ruta_shp)
+ras <- stack(ruta_imagen)
+
+# Calcular estadísticas zonales (media) para cada polígono
+vals <- extract(ras, shp, fun = mean, na.rm = TRUE)
+
+# Convertir a matriz para el modelo XGBoost
+train_data <- data.matrix(vals)
+
+# Obtener clases del campo 'cod_2' y convertir a factor
+classes <- as.numeric(as.factor(shp@data$cod_2)) - 1  # Ajuste para clases en XGBoost
+
+# Dividir datos en conjunto de entrenamiento (80%) y validación (20%)
+set.seed(123)  # Para reproducibilidad
+train_index <- createDataPartition(classes, p = 0.8, list = FALSE)
+
+train_matrix <- train_data[train_index, ]
+train_labels <- classes[train_index]
+
+validation_matrix <- train_data[-train_index, ]
+validation_labels <- classes[-train_index]
+
+# Entrenar el modelo XGBoost
+xgb <- xgboost(
+  data = train_matrix,
+  label = train_labels,
+  eta = 0.1,
+  max_depth = 6,
+  nrounds = 100,
+  objective = "multi:softmax",
+  num_class = length(unique(classes)),
+  nthread = 3
+)
+
+# Generar predicciones en el conjunto de validación
+validation_predictions <- predict(xgb, validation_matrix)
+
+# Crear matriz de confusión para el conjunto de validación
+confusion_matrix <- confusionMatrix(factor(validation_predictions), factor(validation_labels))
+
+# Mostrar la matriz de confusión y métricas de rendimiento
+print(confusion_matrix)
+
+# Predecir para el raster completo y guardar el resultado
+result <- predict(xgb, as.matrix(ras[]))
+res <- raster(ras)
+res <- setValues(res, result + 1)  # Ajuste de predicción para salida
+
+# Guardar el raster de salida
+writeRaster(res, filename = "E:/UAC/2024/CF_TRIFINIO/sentinel_xgb3_poligonos.tif", format = 'GTiff', datatype = "INT2S", overwrite = TRUE)
+
+# Visualizar el raster de salida
+plot(res)
