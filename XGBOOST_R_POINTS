@@ -1,0 +1,59 @@
+# Uses points as training data set
+
+# Cargar las librerías necesarias
+library(xgboost)
+library(raster)
+library(rgdal)  # Para cargar archivos shapefile
+
+# Limpiar el entorno
+rm(list = ls())
+gc()
+
+# Definir rutas de archivos
+ruta_imagen <- "E:/UAC/2024/CF_TRIFINIO/IMAGE_PREPROCESS/clip_mosaick_nodata_fix2.tif"
+ruta_shp <- "E:/UAC/2024/CF_TRIFINIO/CLASS/firmas/ENSAMBLE/train_301024_ptos.shp"
+
+# Cargar archivos
+shp <- shapefile(ruta_shp)
+ras <- stack(ruta_imagen)
+
+# Verificar que el campo 'cod_2' esté presente en los datos de shapefile
+if (!"cod_2" %in% names(shp)) {
+  stop("El campo 'cod_2' no está presente en el shapefile. Verifique el archivo de entrenamiento.")
+}
+
+# Extraer valores de raster en las ubicaciones de los puntos del shapefile
+vals <- extract(ras, shp)
+
+# Preparar los datos de entrenamiento y las clases
+train <- data.matrix(vals)  # Convertir a matriz
+classes <- as.numeric(as.factor(shp@data$cod_2)) - 1  # Ajustar clases para XGBoost
+
+# Definir y entrenar el modelo XGBoost
+xgb <- xgboost(
+  data = train,
+  label = classes,
+  eta = 0.1,
+  max_depth = 6,
+  nrounds = 100,
+  objective = "multi:softmax",
+  num_class = length(unique(classes)),
+  nthread = 3
+)
+
+# Hacer predicciones en todo el raster
+result <- predict(xgb, as.matrix(ras[]))  # Asegurarse de que el raster esté en formato matriz
+
+# Crear un nuevo raster con los resultados
+res <- raster(ras)
+res <- setValues(res, result + 1)  # Ajustar la predicción para la salida
+
+# Guardar el resultado
+writeRaster(res, filename = 'sentinel_xgb3.tif', format = 'GTiff', datatype = "INT2S", overwrite = TRUE)
+writeRaster(res, filename = "E:/UAC/2024/CF_TRIFINIO/sentinel_xgb3.tif", format = 'GTiff', datatype = "INT2S", overwrite = TRUE)
+
+# Guardar el entorno de trabajo
+save.image('xgboost_updated.RData')
+
+# Visualizar resultados
+plot(res)
