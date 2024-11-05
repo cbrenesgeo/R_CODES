@@ -1,0 +1,108 @@
+---
+title: "Separabilidad Firmas Espectrales"
+author: "Cristian Brenes P"
+format: pdf
+editor: visual
+---
+
+## Descripción
+
+Herramienta para evaluar la separabilidad de firmas espectrales de *uso/cobertura de la tierra*.
+
+Este ejercicio usa como **input** un archivo de hoja de calculo formato excel en donde:
+
+-   **LEY:** Es el campo con los codigos de uso cobertura
+-   **mean_0 a mean_6:** Son los campos con las medias de los valores espectrales de cada poligono de entrenamiento en cada banda de la imagen.
+
+## Carga de las librerías
+
+Carga de las librerías necesarias para la implementación del PCA, y las graficas:
+
+```{r}
+library(factoextra)
+library(dplyr)
+library(readxl)
+```
+
+## Carga de la hoja de calculo
+
+Llama la hoja del cálculo con los datos de entrenamiento. Redireccione la ubicación de la hoja en caso necesario.
+
+```{r}
+#| echo: false
+data <- read_excel("E:/UAC/2024/CF_TRIFINIO/CLASS/separacion_clases_2.xlsx")
+head (data)
+```
+
+## Análisis de Componententes principales PCA
+
+Implementación del PCA. En este ejemplo las columnas 3 a 9 contienen los valores espectrales de cada banda.
+
+```{r}
+#| echo: TRUE
+pca_result <- prcomp(data[, 3:9], scale = TRUE)
+```
+
+## Agregación de los resultados al DF orginal
+
+Se agregan los resultados del PCA al DF orginal
+
+```{r}
+# echo: TRUE
+data_pca <- as.data.frame(pca_result$x)          
+data_pca$LEY <- data$ley
+```
+
+## Sumary de los PC 1 y 2
+
+Resumen estadístico para evaluar separabilidad por clase en PC1 y PC2
+
+```{r}
+class_summary <- data_pca %>%
+  group_by(LEY) %>%
+  summarise(PC1_mean = mean(PC1),
+            PC1_sd = sd(PC1),
+            PC2_mean = mean(PC2),
+            PC2_sd = sd(PC2))
+
+print(class_summary)
+```
+
+## Gráfico BoxPlot para las clases
+
+Se crea un boxplot para cada clase en función de PC 1 y 2
+
+```{r}
+
+# Gráfico de boxplot para PC1 y PC2, según las clases
+par(mfrow = c(1, 2))  # Dividir la ventana gráfica en 2
+
+# Boxplot para PC1
+boxplot(PC1 ~ LEY, data = data_pca, main = "Separabilidad en PC1 por clase",
+        xlab = "Clase (LEY)", ylab = "PC1", las = 2, col = rainbow(length(unique(data_pca$LEY))))
+
+# Boxplot para PC2
+boxplot(PC2 ~ LEY, data = data_pca, main = "Separabilidad en PC2 por clase",
+        xlab = "Clase (LEY)", ylab = "PC2", las = 2, col = rainbow(length(unique(data_pca$LEY))))
+
+
+```
+
+## Gráfico de dispersión
+
+Se comparan 2 clases especificas por ejemplo Bosque latifoliado (BL) vs Bosque de coníferas. Cambiar los nombres de las clases y título del gráfico.
+
+```{r}
+data_filtered <- data_pca %>% filter(LEY %in% c("BL", "BC"))
+colores <- c("black", "blue")
+pchs <- c(17, 15)  
+plot(data_filtered$PC1, data_filtered$PC2,
+     col = colores[as.factor(data_filtered$LEY)],
+     pch = pchs[as.factor(data_filtered$LEY)],
+     xlab = "PC1", ylab = "PC2",
+     main = "Separabilidad Espectral entre BL y BC",
+     xlim = range(data_filtered$PC1), ylim = range(data_filtered$PC2))
+legend("bottomright", inset = c(-0.1, 0), legend = c("BL", "BC"), 
+       col = colores, pch = pchs, xpd = TRUE, bty = "n")
+
+```
