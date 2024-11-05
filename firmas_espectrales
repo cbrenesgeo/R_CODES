@@ -1,0 +1,56 @@
+
+# Comparación de firmas espectrales de 2 clases de uso/cobertura de la tierra a partir de los valores medio de las firmas en cada banda de la imagen
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(plotly)
+library(viridis)
+
+# vERSION FUNCIONAL DEL CÓDIGO
+
+# Cargar los datos desde el archivo Excel
+data <- read_excel("E:/UAC/2024/CF_TRIFINIO/CLASS/firmas/ENSAMBLE/firmas_251024.xlsx")
+
+
+# Calcular el promedio de cada banda (mean_0 a mean_6) por clase (LEY)
+class_means <- data %>%
+  group_by(ley) %>%
+  summarise(across(starts_with("mean_"), mean, na.rm = TRUE))
+
+# Filtrar para comparar únicamente las clases CF y MAT
+class_means_filtered <- class_means %>%
+  filter(ley %in% c("BC", "C_AN"))
+
+# Convertir los datos a formato largo para el gráfico de líneas
+class_means_long <- class_means_filtered %>%
+  pivot_longer(cols = starts_with("mean_"), names_to = "Band", values_to = "Mean_Value")
+
+# Renombrar y reordenar las bandas
+class_means_long$Band <- recode(class_means_long$Band,
+                                mean_0 = "Blue",
+                                mean_1 = "Green",
+                                mean_2 = "Red",
+                                mean_3 = "VRE1",
+                                mean_4 = "VRE2",
+                                mean_5 = "VRE3",
+                                mean_6 = "NIR")
+
+# Reordenar las bandas en el orden deseado
+class_means_long$Band <- factor(class_means_long$Band, levels = c("Blue", "Green", "Red", "VRE1", "VRE2", "VRE3", "NIR"))
+
+# Crear el gráfico de líneas con una paleta colorblind-friendly
+p <- ggplot(class_means_long, aes(x = Band, y = Mean_Value, color = ley, group = ley)) +
+  geom_line() +
+  geom_point() +
+  scale_color_viridis_d(option = "D", end = 0.85) +  # Aplicar paleta viridis colorblind-friendly
+  labs(title = "Comparación de Clases: BL vs C_AN ",
+       x = "Banda", y = "Valor Medio") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Convertir el gráfico ggplot2 a un gráfico interactivo con plotly
+p_interactivo <- ggplotly(p)
+
+# Mostrar el gráfico interactivo
+p_interactivo
