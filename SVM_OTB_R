@@ -1,0 +1,51 @@
+# Ejecución de algoritmo de clasificación SVM de Orfeo Toolbox directo desde R
+# Para ejecutar TrainImage de OTB con SVM
+# Construir el comando para OTB
+
+otb_command <- paste(
+  # Herramienta inputs
+  "E:\\UAC\\2024\\CF_TRIFINIO\\OTB-8.1.2-Win64\\bin\\otbcli_TrainImagesClassifier",
+  "-io.il E:\\UAC\\2024\\CF_TRIFINIO\\IMAGE_PREPROCESS\\PCA\\PCA.tif", 
+  "-io.vd E:\\UAC\\2024\\CF_TRIFINIO\\CLASS\\firmas\\ENSAMBLE\\train_301024.shp", 
+  "-io.imstat E:\\UAC\\2024\\CF_TRIFINIO\\CLASS\\firmas\\ENSAMBLE\\PCA_STATS.xml", 
+  "-io.out E:\\UAC\\2024\\CF_TRIFINIO\\CLASS\\firmas\\ENSAMBLE\\model_svm_311024_1.txt", 
+  "-io.confmatout E:\\UAC\\2024\\CF_TRIFINIO\\CLASS\\firmas\\ENSAMBLE\\matrix_svm_311024_1.txt",
+  "-elev.dem E:\\UAC\\2024\\CF_TRIFINIO\\IMAGE_PREPROCESS\\dem",
+  
+  # Parametrización
+  "-sample.mt -1", 
+  "-sample.mv -1", 
+  "-sample.vtr 0.8",
+  "-sample.vfn cod_2",
+  "-ram 40000",
+  
+  # Clasificador SVM y parámetros de tuning
+  "-classifier libsvm",
+  "-classifier.libsvm.k poly",
+  "-classifier.libsvm.c 10",
+  "-classifier.libsvm.gamma 0.1",
+  "-classifier.libsvm.coef0 1",
+  "-classifier.libsvm.degree 4",
+  "-classifier.libsvm.nu 0.7",
+  "-classifier.libsvm.opt false",   # Activar optimización de parámetros
+  "-classifier.libsvm.prob false", # Desactivar estimación de probabilidad
+ 
+  
+  sep=" ")
+
+# Ejecutar el comando
+system(otb_command)
+
+# ----------------------------------------------------------------------------------
+otb_command <- paste(
+  "E:\\UAC\\TEMP\\OTB-8.1.2-Win64\\bin\\otbcli_ImageClassifier",
+  "-in E:\\UAC\\2024\\CF_TRIFINIO\\IMAGE_PREPROCESS\\PCA\\PCA.tif",
+  "-model E:\\UAC\\2024\\CF_TRIFINIO\\CLASS\\firmas\\ENSAMBLE\\model_svm_311024_1.txt", 
+  "-imstat E:\\UAC\\2024\\CF_TRIFINIO\\CLASS\\firmas\\ENSAMBLE\\PCA_STATS.xml", 
+  "-out E:\\UAC\\2024\\CF_TRIFINIO\\CLASS\\class_svm_test_311024_polynomial.tif uint8", 
+  "-ram 40000" ,
+  "-nbclasses 20",
+  sep=" ")
+
+# Ejecutar el comando
+system(otb_command)
