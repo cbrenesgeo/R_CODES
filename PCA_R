@@ -1,0 +1,71 @@
+# Comparación de firmas espectrales usando análisis PCA
+# usa como archivo de entrada una hoja de calculo con las medias de los valores de los ND de cada una de las bandas de la imagen y una equiqueta de uso/cobertura del suelo
+# Instalar y cargar los paquetes necesarios
+install.packages("factoextra")
+library(factoextra)
+install.packages("dplyr")
+library(dplyr)
+install.packages("readxl")
+library(readxl)
+install.packages("plotly")
+library(plotly)
+install.packages("ggplot2")
+library(ggplot2)
+
+# Cargar los datos
+data <- read_excel("E:/UAC/2024/CF_TRIFINIO/CLASS/firmas/ENSAMBLE/firmas_251024.xlsx")
+
+# Realizar el PCA
+pca_result <- prcomp(data[, 6:12], scale = TRUE)  # Usamos columnas mean_0 a mean_6
+
+# Agregar los resultados del PCA al dataframe original
+data_pca <- as.data.frame(pca_result$x)          # Extraemos los componentes principales
+data_pca$LEY <- data$ley                         # Añadimos la columna de clases
+
+# Resumen estadístico para evaluar separabilidad por clase en PC1 y PC2
+class_summary <- data_pca %>%
+  group_by(LEY) %>%
+  summarise(PC1_mean = mean(PC1),
+            PC1_sd = sd(PC1),
+            PC2_mean = mean(PC2),
+            PC2_sd = sd(PC2))
+
+print(class_summary) # Mostrar la tabla
+
+# Gráfico interactivo de boxplot para PC1 y PC2 según las clases
+# Boxplot para PC1
+boxplot_PC1 <- ggplot(data_pca, aes(x = LEY, y = PC1, fill = LEY)) +
+  geom_boxplot() +
+  labs(title = "Separabilidad en PC1 por clase", x = "Clase (LEY)", y = "PC1") +
+  theme_minimal()
+
+# Convertir a gráfico interactivo
+boxplot_PC1_interactivo <- ggplotly(boxplot_PC1)
+
+# Boxplot para PC2
+boxplot_PC2 <- ggplot(data_pca, aes(x = LEY, y = PC2, fill = LEY)) +
+  geom_boxplot() +
+  labs(title = "Separabilidad en PC2 por clase", x = "Clase (LEY)", y = "PC2") +
+  theme_minimal()
+
+# Convertir a gráfico interactivo
+boxplot_PC2_interactivo <- ggplotly(boxplot_PC2)
+
+# Filtrar los datos para las clases específicas que queremos comparar
+data_filtered <- data_pca %>% filter(LEY %in% c("BL", "BC"))
+
+# Gráfico de dispersión interactivo para PC1 vs PC2
+scatter_plot <- ggplot(data_filtered, aes(x = PC1, y = PC2, color = LEY, shape = LEY)) +
+  geom_point(size = 0.25) +
+  labs(title = "Separabilidad Espectral entre Cafetal vs Matorral", x = "PC1", y = "PC2") +
+  theme_minimal() +
+  scale_color_manual(values = c("black", "blue")) +
+  scale_shape_manual(values = c(17, 15))  # Triángulo y cuadrado
+
+# Convertir a gráfico interactivo
+scatter_plot_interactivo <- ggplotly(scatter_plot)
+
+# Mostrar los gráficos interactivos
+boxplot_PC1_interactivo
+boxplot_PC2_interactivo
+scatter_plot_interactivo
