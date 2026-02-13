@@ -51,7 +51,7 @@ for (i in seq_along(indices)) {
 plot_raster <- function(r, title) {
   r_df <- as.data.frame(r, xy = TRUE, na.rm = TRUE)
   colnames(r_df) <- c("x", "y", "value")
-
+  
   ggplot(r_df) +
     geom_raster(aes(x = x, y = y, fill = value)) +
     scale_fill_viridis_c(option = "plasma") +
@@ -64,7 +64,7 @@ plot_raster <- function(r, title) {
 plotRGB(img, r = 1, g = 2, b = 3, stretch = "lin", main = "Imagen RGB Original")
 
 # Visualizar los índices
-for (i in seq_along(indices)) {
-  print(plot_raster(indices[[i]], paste("Índice:", nombres_indices[i])))
-}
+#for (i in seq_along(indices)) {
+#  print(plot_raster(indices[[i]], paste("Índice:", nombres_indices[i])))
+#}
 
